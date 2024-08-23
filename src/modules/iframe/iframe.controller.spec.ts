@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { IframeController } from './iframe.controller';
-import { IframeService } from '../iframe.service';
-import { CreateIframeDto } from '../dto/create-iframe.dto';
-import { ApiKeyGuard } from '../../../common/auth/auth/auth.guard';
+import { IframeService } from '../iframe/iframe.service';
+import { CreateIframeDto } from '../iframe/dto/create-iframe.dto';
+import { ApiKeyGuard } from '../../common/auth/auth/auth.guard';
 import { HttpService } from '@nestjs/axios'; // Importa HttpService
 
 describe('IframeController', () => {

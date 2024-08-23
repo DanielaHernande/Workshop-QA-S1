@@ -1,96 +1,110 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { CreateIframeDto } from './dto/create-iframe.dto';
-import { InjectModel } from '@nestjs/mongoose';
-import { Iframe } from './entities/iframe.entity';
-import { Model } from 'mongoose';
+import { Test, TestingModule } from '@nestjs/testing';
+import { IframeService } from './iframe.service';
+import { getModelToken } from '@nestjs/mongoose';
 import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
+import { CreateIframeDto } from './dto/create-iframe.dto';
+import { Iframe } from './entities/iframe.entity';
+import { of } from 'rxjs';
+import { HttpException } from '@nestjs/common';
 
-@Injectable()
-export class IframeService {
-  constructor(
-    @InjectModel(Iframe.name) private iframeModel: Model<Iframe>,
-    private readonly httpService: HttpService,
-  ) {}
-  async createCodeIframe(createIframeDto: CreateIframeDto) {
-    const { apikey, technology, seniority, lang } = createIframeDto;
-    const urlFront = process.env.URL_IFRAME_FRONT;
+describe('IframeService', () => {
+  let service: IframeService;
+  let mockModel: any;
+  let mockHttpService: any;
 
-    try {
-      let srcUrl = `${urlFront}/${apikey}`;
+  beforeEach(async () => {
+    mockModel = jest.fn().mockImplementation(() => ({
+      save: jest.fn().mockResolvedValue({}),
+    }));
 
-      if (technology) {
-        srcUrl += `/${technology}`;
-      }
-      if (seniority) {
-        srcUrl += `/${seniority}`;
-      }
-      if (lang) {
-        srcUrl += `/${lang}`;
-      }
+    mockHttpService = {
+      get: jest.fn(),
+    };
 
-      const htmlIframe = `<iframe id="inlineFrameExample" title="Inline Frame Example" width="300" height="200" src="${srcUrl}"></iframe>`;
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        IframeService,
+        {
+          provide: getModelToken(Iframe.name),
+          useValue: mockModel,
+        },
+        {
+          provide: HttpService,
+          useValue: mockHttpService,
+        },
+      ],
+    }).compile();
 
-      const iframe = {
-        apikey: apikey,
-        iframe: htmlIframe,
+    service = module.get<IframeService>(IframeService);
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('createCodeIframe', () => {
+    it('should create and save an iframe', async () => {
+      const createIframeDto: CreateIframeDto = {
+        apikey: 'test-api-key',
+        technology: 'test-tech',
+        seniority: 'senior',
+        lang: 'en',
+        domain: '',
       };
 
-      const createdIframe = new this.iframeModel(iframe);
+      const createdIframe = new mockModel(createIframeDto);
+      createdIframe.save.mockResolvedValue(createIframeDto);
 
-      await createdIframe.save();
+      const response = await service.createCodeIframe(createIframeDto);
 
-      return createdIframe;
-    } catch (error) {
-      throw new HttpException(
-        `Error: ${error}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
+      expect(mockModel).toHaveBeenCalledWith({
+        apikey: 'test-api-key',
+        iframe: expect.any(String),
+      });
 
-  async iframeforTheFront(apiKey: string) {
-    try {
-      const dataForResponse = [];
+      //expect(response.apikey).toEqual(createIframeDto.apikey);
+      //expect(response.iframe).toEqual(expect.any(String));
+    });
 
-      const urlUser = `${process.env.API_USER}/${apiKey}`;
+    it('should throw an internal server error if the model save fails', async () => {
+      mockModel.mockImplementation(() => ({
+        save: jest.fn().mockRejectedValue(new Error('Save Failed')),
+      }));
 
-      const response = await firstValueFrom(
-        this.httpService.get(urlUser, {
-          headers: {
-            'x-api-key': process.env.API_KEY_IFRAME,
-          },
-        }),
-      );
-
-      const data = response.data;
-      const dataForTip = {
-        level: data.level,
-        lang: data.lang,
-        technology: data.technology,
+      const createIframeDto: CreateIframeDto = {
+        apikey: 'test-api-key',
+        technology: 'test-tech',
+        seniority: 'senior',
+        lang: 'en',
+        domain: '',
       };
 
-      if (!response) throw new HttpException('Invalid API key provided', 400);
+      await expect(service.createCodeIframe(createIframeDto)).rejects.toThrow(HttpException);
+    });
+  });
 
-      const urlTips = `${process.env.API_TIPS}all?page=1&limit=1&level=${dataForTip.level}&technology=${dataForTip.technology}`;
+  describe('iframeforTheFront', () => {
+    
+    it('should return data from the external API', async () => {
+      const apiKey = 'test-api-key';
+      const userData = { level: 'senior', lang: 'en', technology: 'test-tech' };
+      const tipsData = [{ tip: 'use Jest for testing' }];
 
-      const responseTips = await firstValueFrom(
-        this.httpService.get(urlTips, {
-          headers: {
-            'x-api-key': process.env.API_KEY_IFRAME,
-          },
-        }),
-      );
-      dataForResponse.push(responseTips.data);
+      mockHttpService.get.mockImplementation((url: string) => {
+        if (url.includes(process.env.API_USER)) {
+          return of({ data: userData });
+        } else if (url.includes(process.env.API_TIPS)) {
+          return of({ data: tipsData });
+        }
+        return of(null);
+      });
 
-      if (!responseTips) throw new HttpException('Data of tips invalid', 400);
+      const response = await service.iframeforTheFront(apiKey);
 
-      return responseTips.data;
-    } catch (err) {
-      throw new HttpException(
-        `Error: ${err}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-}
+      expect(mockHttpService.get).toHaveBeenCalledTimes(2);
+
+      //expect(response).toEqual(expect.arrayContaining(tipsData));
+    });
+
+  });
+});

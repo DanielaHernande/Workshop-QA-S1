@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { IframeService } from './iframe.service';
-import { IframeController } from './controller/iframe.controller';
+import { IframeController } from '../iframe/iframe.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Iframe, IframeSchema } from './entities/iframe.entity';
 import { HttpModule } from '@nestjs/axios';
