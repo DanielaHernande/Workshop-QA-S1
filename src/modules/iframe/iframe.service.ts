@@ -13,16 +13,14 @@ export class IframeService {
     private readonly httpService: HttpService,
   ) {}
   async createCodeIframe(createIframeDto: CreateIframeDto) {
-
     const { apikey, technology, seniority, lang } = createIframeDto;
-    const urlFront = process.env.URL_IFRAME_FRONT
-     
+    const urlFront = process.env.URL_IFRAME_FRONT;
+
     try {
-      let srcUrl =   `${urlFront}/${apikey}`;
-      
+      let srcUrl = `${urlFront}/${apikey}`;
+
       if (technology) {
         srcUrl += `/${technology}`;
-
       }
       if (seniority) {
         srcUrl += `/${seniority}`;
@@ -55,27 +53,24 @@ export class IframeService {
     try {
       const dataForResponse = [];
 
+      const urlUser = `${process.env.API_USER}/${apiKey}`;
 
-      const urlUser = `${process.env.API_USER}/${apiKey}`
+      const response = await firstValueFrom(
+        this.httpService.get(urlUser, {
+          headers: {
+            'x-api-key': process.env.API_KEY_IFRAME,
+          },
+        }),
+      );
 
-          const response = await firstValueFrom(
-            this.httpService.get(urlUser, {
-              headers: {
-                'x-api-key': process.env.API_KEY_IFRAME,
-              },
-            }),
-          );
-      
-         const data = response.data;
-          const dataForTip = {
-            level: data.level,
-            lang: data.lang,
-            technology: data.technology,
-          };
+      const data = response.data;
+      const dataForTip = {
+        level: data.level,
+        lang: data.lang,
+        technology: data.technology,
+      };
 
-      if (!response)
-        throw new HttpException('Invalid API key provided', 400);
-
+      if (!response) throw new HttpException('Invalid API key provided', 400);
 
       const urlTips = `${process.env.API_TIPS}all?page=1&limit=1&level=${dataForTip.level}&technology=${dataForTip.technology}`;
 
