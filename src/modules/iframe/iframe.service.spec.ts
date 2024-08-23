@@ -52,11 +52,13 @@ describe('IframeService', () => {
         domain: '',
       };
 
+      // Ensures that the Iframe is created and saved.
       const createdIframe = new mockModel(createIframeDto);
       createdIframe.save.mockResolvedValue(createIframeDto);
 
       const response = await service.createCodeIframe(createIframeDto);
 
+      // Verify the calls to the constructor and the call to the save method
       expect(mockModel).toHaveBeenCalledWith({
         apikey: 'test-api-key',
         iframe: expect.any(String),
@@ -104,6 +106,7 @@ describe('IframeService', () => {
       expect(mockHttpService.get).toHaveBeenCalledTimes(2);
 
       //expect(response).toEqual(expect.arrayContaining(tipsData));
+      //expect(response).toEqual(tipsData);
     });
 
   });
